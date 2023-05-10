@@ -307,7 +307,7 @@ for k in ks:
     window = pd.concat(windows_df)
     window_idx = window.index
     cells_idx  = cells.loc[window_idx]
-    window = pd.concat([cells_idx[keep_cols], window])
+    window = pd.concat([cells_idx[keep_cols], window],1)
     windows[k] = window.reset_index(drop=True)
 
 
