@@ -244,5 +244,37 @@ plt.tight_layout()
 # plt.savefig(os.path.join(save_dir, fname))
 plt.clf()
 
-# %%
-tissue_group  = cells[list(celltype_cols)+['Immune_ptype','all_region','region','case','neighborhood10']].groupby(['Immune_ptype'])
+# %% Boxplot
+# %% Boxplot
+cell_groups  = cells.groupby(['Immune_ptype'])
+for subtype, group in tissue_group.groups.items():
+    print(subtype)
+
+import scipy.stats as stats
+p_values = []
+labels = cells['Immune_ptype'].unique()
+# Perform statistical comparisons and store the p-values
+for i in range(len(labels)):
+    for j in range(i+1, len(labels)):
+        subset1 = cells[cells['Immune_ptype']==labels[i]]
+        subset2 = cells[cells['Immune_ptype'] == labels[j]]
+        _, p_value = stats.ttest_ind(subset1[celltype_cols], subset2[celltype_cols])
+        p_values.append(p_value)
+
+# Plot the boxplots
+cells.boxplot(column=list(celltype_cols), by='Immune_ptype')
+
+# Add a title
+plt.title('Boxplot Comparison')
+
+# Add a y-axis label
+plt.ylabel('Values')
+
+# Add p-value annotations
+annotation_y = cells[celltype_cols].values.max()  # Set the y-coordinate for annotations
+for i, p_value in enumerate(p_values):
+    x = i+1  # Set the x-coordinate for annotations
+    plt.annotate(f'p-value = {p_value:.3f}', xy=(x, annotation_y), ha='center')
+
+# Show the plot
+plt.show()
