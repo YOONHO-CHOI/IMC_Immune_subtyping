@@ -277,3 +277,9 @@ for i, p_value in enumerate(p_values):
 
 # Show the plot
 plt.show()
+
+
+
+agg_func = lambda x: x.sum()
+statistics = cells.groupby(['all_region', 'Immune_ptype']).agg(agg_func)[celltype_cols]
+print(statistics)
