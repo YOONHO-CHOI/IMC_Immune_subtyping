@@ -245,7 +245,6 @@ plt.tight_layout()
 plt.clf()
 
 # %% Boxplot
-# %% Boxplot
 cell_groups  = cells.groupby(['Immune_ptype'])
 for subtype, group in tissue_group.groups.items():
     print(subtype)
