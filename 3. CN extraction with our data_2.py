@@ -206,7 +206,7 @@ neighborhood_name = "neighborhood"+str(k)
 temp_windows = windows[k]
 
 # Get CN features
-num_CN = 5 # Set number of CN features you want.
+num_CN = 10 # Set number of CN features you want.
 k_centroids     = {}
 km = MiniBatchKMeans(n_clusters = num_CN,random_state=0)
 labelskm = km.fit_predict(temp_windows[celltype_cols].values)
@@ -312,7 +312,7 @@ for index, row in proportions.iterrows():
 plt.tight_layout()
 plt.show()
 
-
+#%% Plot for subtypes according to CNs
 #%% Plot for subtypes according to CNs
 agg_func = lambda x: x.sum()
 cells2         = pd.concat([cells,pd.get_dummies(cells['neighborhood10'])],1)
@@ -348,4 +348,175 @@ for index, row in proportions.iterrows():
     x=x+1
 # Display the plot
 plt.tight_layout()
+plt.show()
+
+
+#%% violinplots
+cells2         = pd.concat([cells,pd.get_dummies(cells['neighborhood10'])],1)
+celltype_cols2 = np.unique(cells['neighborhood10'])
+groups = cells2.groupby(['case']).agg(agg_func)[celltype_cols2]
+row_sums = groups.sum(axis=1)
+proportions = groups.div(row_sums, axis=0)
+
+subtypes_ = cells2.groupby(['case'])
+subtypes = []
+for _, group in subtypes_.groups.items():
+    subtypes.append(cells2.iloc[group[0]]['Immune_ptype'])
+
+proportions['Immune subtypes'] = subtypes
+proportions['Patient'] = [1,2,3,4,5,6,7,8,9]
+
+# Get the variable columns
+variable_columns = [0,1,2,3,4]
+# Create a figure with subplots for each variable
+fig, axes = plt.subplots(nrows=len(variable_columns), figsize=(8, 6), sharey=True)
+fig.subplots_adjust(hspace=0.4)
+# Iterate over the variable columns and create violin plots
+for i, variable in enumerate(variable_columns):
+    ax = axes[i]
+    sns.violinplot(data=proportions, x='Immune subtypes', y=variable, ax=ax)
+    ax.set_xlabel('Immune subtypes')
+    ax.set_ylabel(variable)
+# Set the title for the figure
+fig.suptitle('Violin Plots for Each Variable')
+# Show the plot
+plt.show()
+
+
+
+#%% Make micro average table for markers
+sum_func = lambda x: x.sum()
+# cells2         = pd.concat([cells,pd.get_dummies(cells['neighborhood10'])],1)
+# celltype_cols2 = np.unique(cells['neighborhood10'])
+# Stats for each ROIs
+roi_groups_cellcount = cells.groupby(['all_region']).agg(sum_func)[celltype_cols]
+row_sums = roi_groups_cellcount.sum(axis=1)
+groups_by_rois = cells.groupby(['all_region'])
+roi_groups = roi_groups_cellcount.div(row_sums, axis=0)
+subtypes = []
+cases    = []
+for _, group in groups_by_rois.groups.items():
+    subtypes.append(cells.iloc[group[0]]['Immune_ptype'])
+    cases.append(cells.iloc[group[0]]['case'])
+roi_groups['Immune subtypes'] = subtypes
+roi_groups['row count'] = row_sums
+roi_groups['case'] = cases
+
+
+# Stats for each Cases (micro avg of each ROIs)
+mean_func = lambda x: x.mean()
+std_func  = lambda x: x.std()
+case_groups_mean = roi_groups.groupby(['case']).agg(mean_func)[celltype_cols]
+case_groups_std  = roi_groups.groupby(['case']).agg(std_func)[celltype_cols]
+groups_by_case   = roi_groups.groupby(['case'])
+subtypes = []
+cases    = []
+row_sums = []
+for _, group in groups_by_case.groups.items():
+    subtypes.append(roi_groups.iloc[group[0]]['Immune subtypes'])
+    cases.append(roi_groups.iloc[group[0]]['case'])
+    row_sums.append(roi_groups.loc[group]['row count'].sum())
+case_groups_mean['Immune subtypes'] = subtypes
+case_groups_mean['row count'] = row_sums
+case_groups_mean['case'] = cases
+
+
+#%% Make micro average table for CN features
+sum_func = lambda x: x.sum()
+cells_CN         = pd.concat([cells,pd.get_dummies(cells['neighborhood10'])],1)
+celltype_cols_CN = np.unique(cells['neighborhood10'])
+# Stats for each ROIs
+roi_groups_cellcount_CN = cells_CN.groupby(['all_region']).agg(sum_func)[celltype_cols_CN]
+row_sums_CN = roi_groups_cellcount_CN.sum(axis=1)
+groups_by_rois_CN = cells_CN.groupby(['all_region'])
+roi_groups_CN = roi_groups_cellcount_CN.div(row_sums_CN, axis=0)
+subtypes = []
+cases    = []
+for _, group in groups_by_rois_CN.groups.items():
+    subtypes.append(cells_CN.iloc[group[0]]['Immune_ptype'])
+    cases.append(cells_CN.iloc[group[0]]['case'])
+roi_groups_CN['Immune subtypes'] = subtypes
+roi_groups_CN['row count'] = row_sums_CN
+roi_groups_CN['case'] = cases
+
+
+# Stats for each Cases (micro avg of each ROIs)
+mean_func = lambda x: x.mean()
+std_func  = lambda x: x.std()
+case_groups_mean_CN = roi_groups_CN.groupby(['case']).agg(mean_func)[celltype_cols_CN]
+case_groups_std_CN  = roi_groups_CN.groupby(['case']).agg(std_func)[celltype_cols_CN]
+groups_by_case_CN   = roi_groups_CN.groupby(['case'])
+subtypes = []
+cases    = []
+row_sums_CN = []
+for _, group in groups_by_case_CN.groups.items():
+    subtypes.append(roi_groups_CN.iloc[group[0]]['Immune subtypes'])
+    cases.append(roi_groups_CN.iloc[group[0]]['case'])
+    row_sums_CN.append(roi_groups_CN.loc[group]['row count'].sum())
+case_groups_mean_CN['Immune subtypes'] = subtypes
+case_groups_mean_CN['row count'] = row_sums_CN
+case_groups_mean_CN['case'] = cases
+
+import pandas as pd
+from scipy.stats import kruskal
+
+# Example DataFrame
+df = case_groups_mean[case_groups_mean.columns[:6]]
+
+# Get unique immune subtypes
+immune_subtypes = df['Immune subtypes'].unique()
+# Perform Kruskal-Wallis test for each variable
+for col in df.columns[:-1]:  # Exclude the 'Immune subtype' column
+    print(f"Variable: {col}")
+    groups = []
+    for subtype in immune_subtypes:
+        group = df[df['Immune subtypes'] == subtype][col]
+        groups.append(group)
+        print(f"  Subtype: {subtype}, Values: {group.values}")
+    h_stat, p_value = kruskal(*groups)
+    print(f"  Kruskal-Wallis H-statistic: {h_stat}, p-value: {p_value}")
+    print()
+
+
+#%% Wilcoxon Rank-Sum Test for CN
+from scipy.stats import ranksums
+df = case_groups_mean_CN[case_groups_mean_CN.columns[:11]]
+# Define the unique immune subtypes
+immune_subtypes = df['Immune subtypes'].unique()
+
+# Create an empty dataframe to store the p-values
+p_values_df = pd.DataFrame(index=df.columns[:-1], columns=immune_subtypes)
+
+# Perform Wilcoxon rank-sum test for each immune subtype
+for subtype in immune_subtypes:
+    subset = df[df['Immune subtypes'] == subtype]
+    other_subtypes = immune_subtypes[immune_subtypes != subtype]
+    for variable in df.columns[:-1]:
+        p_values = []
+        for other_subtype in other_subtypes:
+            other_subset = df[df['Immune subtypes'] == other_subtype]
+            _, p_value = ranksums(subset[variable], other_subset[variable])
+            p_values.append(p_value)
+        p_values_df.loc[variable, subtype] = min(p_values)
+
+# Create a heatmap of the p-values
+plt.figure(figsize=(10, 8))
+sns.heatmap(p_values_df.astype(float), annot=True, cmap='coolwarm', linewidths=0.5)
+plt.title('Wilcoxon Rank-Sum Test p-values')
+
+# Display the heatmap
+plt.show()
+
+
+
+#%% Spearman correlation test
+# Compute the Spearman's rank correlation coefficient matrix
+correlation_matrix = df.drop('Immune subtypes', axis=1).corr(method='spearman')
+
+# Create a heatmap of the correlation matrix
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
+plt.title("Spearman's Rank Correlation Coefficient")
+
+# Display the heatmap
 plt.show()
